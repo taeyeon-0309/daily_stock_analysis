@@ -206,3 +206,31 @@ jobs:
             echo "📜 最近日志（最后 30 行）:"
             tail -30 logs/stock_analysis_*.log 2>/dev/null || echo "无日志"
           fi
+      - name: 🚀 发送报告给 n8n (AI 深度总结)
+        if: always() && hashFiles('reports/*') != ''
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+        run: |
+          # 1. 自动定位最新的报告文件
+          REPORT_FILE=$(ls -t reports/* | head -n1)
+          echo "Processing: $REPORT_FILE"
+          
+          # 2. 使用 jq 将文件内容封装进一个干净的 JSON 结构中
+          # --rawfile 会自动处理文件内的所有换行和引号转义
+          jq -n \
+            --rawfile content "$REPORT_FILE" \
+            --arg repo "${{ github.repository }}" \
+            --arg run_id "${{ github.run_id }}" \
+            '{
+              timestamp: (now | strflocaltime("%Y-%m-%d %H:%M:%S")),
+              repository: $repo,
+              workflow_url: ("https://github.com/" + $repo + "/actions/runs/" + $run_id),
+              raw_report: $content
+            }' > n8n_payload.json
+            
+          # 3. 推送至 n8n
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d @n8n_payload.json \
+            "$N8N_WEBHOOK_URL"
+     
