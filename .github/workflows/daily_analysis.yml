@@ -210,12 +210,12 @@ jobs:
             tail -30 logs/stock_analysis_*.log 2>/dev/null || echo "无日志"
           fi
       - name: 🚀 发送报告给 n8n (AI 深度总结)
-        if: always() && hashFiles('reports/*') != ''
+        if: always() && hashFiles('src/reports/*') != ''
         env:
           N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
         run: |
           # 1. 自动定位最新的报告文件
-          REPORT_FILE=$(ls -t reports/* | head -n1)
+          REPORT_FILE=$(ls -t src/reports/* | head -n1)
           echo "Processing: $REPORT_FILE"
           
           # 2. 使用 jq 将文件内容封装进一个干净的 JSON 结构中
